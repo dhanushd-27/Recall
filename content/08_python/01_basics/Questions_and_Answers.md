@@ -1,42 +1,188 @@
-# Basics - Questions and Answers
+# Python Basics
 
-1. **What are the key features of Python?**
-   - **Easy to learn and read**: Clear, simple syntax that resembles English.
-   - **Interpreted**: Code is executed line-by-line.
-   - **Dynamically Typed**: No need to declare variable types.
-   - **Object-Oriented**: Supports classes and objects.
-   - **Large Standard Library**: Provides modules for various tasks.
-   - **High-level Language**: Manages memory and other low-level details.
+# 📚 Navigation
+
+- [Beginner](#-beginner)
+- [Intermediate](#-intermediate)
+- [Advanced](#-advanced)
 
 ---
 
-2. **Explain the difference between lists and tuples.**
-   - **Lists**: Mutable (can be changed). Defined with `[]`.
-   - **Tuples**: Immutable (cannot be changed after creation). Defined with `()`. Tuples are generally faster and safer for data that shouldn't change.
+## 🟢 Beginner
+
+### 1. Python Fundamentals
+
+**Question:** Dynamic typing and type hints.
+
+**Answer:**
+
+```python
+# Dynamic typing — no declarations needed
+x = 42          # int
+x = "hello"     # now str — no error!
+
+# Type hints (Python 3.10+) — optional but recommended
+def greet(name: str, age: int) -> str:
+    return f"Hello {name}, you are {age}"
+
+# Duck typing — "if it walks like a duck..."
+def get_length(obj):
+    return len(obj)  # Works on str, list, dict — anything with __len__
+
+get_length("hello")  # 5
+get_length([1, 2, 3]) # 3
+```
+
+| Feature        | Python                   | TypeScript              |
+| -------------- | ------------------------ | ----------------------- |
+| Type system    | Dynamic (optional hints) | Static (compile-time)   |
+| Type checking  | `mypy` (separate tool)   | `tsc` (built-in)        |
+| Runtime impact | None (hints are ignored) | None (types are erased) |
 
 ---
 
-3. **What are list comprehensions and how do you use them?**
+### 2. Data Structures
 
-   List comprehensions provide a concise way to create lists based on existing lists or iterables.
-   - **Example**: `[x**2 for x in range(10) if x % 2 == 0]` creates a list of squares for even numbers from 0 to 9.
+**Question:** Built-in structures.
+
+**Answer:**
+
+| Python  | JS Equivalent    | Mutable | Ordered   | Use case                  |
+| ------- | ---------------- | ------- | --------- | ------------------------- |
+| `list`  | `Array`          | ✅      | ✅        | General collection        |
+| `tuple` | — (freeze array) | ❌      | ✅        | Fixed data, dict keys     |
+| `set`   | `Set`            | ✅      | ❌        | Unique values, membership |
+| `dict`  | `Object` / `Map` | ✅      | ✅ (3.7+) | Key-value mapping         |
+
+```python
+# List comprehension — like JS .map().filter()
+squares = [x**2 for x in range(10) if x % 2 == 0]
+
+# Dict
+user = {"name": "Alice", "age": 30}
+user.get("email", "N/A")  # Safe access with default
+
+# Tuple unpacking
+x, y, z = (1, 2, 3)  # Like JS destructuring
+```
 
 ---
 
-4. **How does Python handle memory management?**
+## 🟡 Intermediate
 
-   Python uses an automatic memory management system that includes:
-   - **Reference Counting**: Keeps track of the number of references to an object. When the count reaches zero, the object is deallocated.
-   - **Garbage Collector**: A cyclic garbage collector that identifies and cleans up objects with circular references that reference counting would miss.
+### 1. Comprehensions & Generators
+
+**Question:** Memory-efficient processing.
+
+**Answer:**
+
+```python
+# List comprehension — creates entire list in memory
+squares = [x**2 for x in range(10_000_000)]  # ~80MB
+
+# Generator expression — lazy, yields one value at a time
+squares = (x**2 for x in range(10_000_000))  # ~0MB until iterated
+
+# Generator function
+def read_large_file(path):
+    with open(path) as f:
+        for line in f:
+            yield line.strip()  # Process one line at a time
+
+# Process 10GB file with constant memory
+for line in read_large_file("huge.log"):
+    if "ERROR" in line:
+        print(line)
+```
 
 ---
 
-5. **What is the difference between `deep copy` and `shallow copy`?**
-   - **Shallow Copy**: Creates a new object but fills it with references to the original nested objects.
-   - **Deep Copy**: Creates a new object and recursively creates copies of all nested objects. Changes to nested objects in the copy won't affect the original.
+### 2. Decorators
+
+**Question:** Logging execution time.
+
+**Answer:**
+
+```python
+import functools
+import time
+
+def timer(func):
+    @functools.wraps(func)  # Preserve original function metadata
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        elapsed = time.perf_counter() - start
+        print(f"{func.__name__} took {elapsed:.4f}s")
+        return result
+    return wrapper
+
+@timer
+def process_data(data):
+    time.sleep(1)
+    return len(data)
+
+process_data([1, 2, 3])  # "process_data took 1.0012s"
+
+# Stacking decorators
+@timer          # Applied second (outer)
+@cache          # Applied first (inner)
+def expensive(n):
+    return sum(range(n))
+```
 
 ---
 
-6. **Explain the purpose of `self` in Python classes.**
+## 🔴 Advanced
 
-   `self` is a reference to the current instance of the class. It is used to access variables and methods associated with that specific object. It must be the first parameter of any instance method in a class.
+### 1. Async Python
+
+**Question:** `asyncio` vs Node.js event loop.
+
+**Answer:**
+
+```python
+import asyncio
+import aiohttp
+
+async def fetch(url: str) -> dict:
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            return await response.json()
+
+# Concurrent requests — like Promise.all
+async def fetch_all(urls: list[str]):
+    results = await asyncio.gather(*[fetch(url) for url in urls])
+    return results
+
+asyncio.run(fetch_all(["https://api.a.com", "https://api.b.com"]))
+```
+
+| Feature     | Python asyncio             | Node.js                      |
+| ----------- | -------------------------- | ---------------------------- |
+| Event loop  | Must be started explicitly | Always running               |
+| Ecosystem   | Growing (aiohttp, asyncpg) | Mature (everything is async) |
+| CPU-bound   | Use `ProcessPoolExecutor`  | Use Worker Threads           |
+| Default I/O | Synchronous (blocking)     | Asynchronous (non-blocking)  |
+
+---
+
+### 2. Package Management
+
+**Question:** Modern Python tooling.
+
+**Answer:**
+
+| Tool     | Speed            | Lock file                   | Resolver   | Recommended       |
+| -------- | ---------------- | --------------------------- | ---------- | ----------------- |
+| `pip`    | Slow             | `requirements.txt` (manual) | Basic      | Legacy            |
+| `poetry` | Medium           | `poetry.lock`               | SAT solver | Good              |
+| `uv`     | Very fast (Rust) | `uv.lock`                   | Modern     | ✅ 2026 standard  |
+| `conda`  | Slow             | `environment.yml`           | SAT solver | Data science only |
+
+```bash
+# uv — 10-100x faster than pip
+uv init my-project
+uv add fastapi uvicorn
+uv run python main.py
+```

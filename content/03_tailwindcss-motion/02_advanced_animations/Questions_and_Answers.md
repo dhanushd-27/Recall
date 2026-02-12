@@ -1,29 +1,239 @@
-# Advanced Animations - Questions and Answers
+# Advanced Tailwind CSS Animations
 
-1. **How do you integrate Framer Motion with Tailwind CSS?**
+# 📚 Navigation
 
-   You use the `motion` component from `framer-motion` and apply Tailwind classes for styling (layouts, colors, spacing). The animation logic (variants, transitions) is handled via motion props like `initial`, `animate`, and `whileHover`.
-
----
-
-2. **What are layout animations in Framer Motion?**
-
-   By adding the `layout` prop to a `motion` component, Framer Motion will automatically animate any changes to its layout (position or size) that occur when the component rerenders. This works even if the change is triggered by a parent's flexbox or grid adjustment.
+- [Beginner](#-beginner)
+- [Intermediate](#-intermediate)
+- [Advanced](#-advanced)
 
 ---
 
-3. **How do you handle orchestrations (staggerChildren, delayChildren)?**
+## 🟢 Beginner
 
-   Orchestration is handled via the `transition` prop within variants. `staggerChildren` allows child components with variants to animate sequentially with a delay between them. `delayChildren` specifies a delay before child animations start.
+### 1. Combining Multiple Animations
+
+**Question:**
+Combine multiple motion presets on one element.
+
+**Answer:**
+
+```html
+<!-- Combine fade + slide + scale -->
+<div
+  class="motion-preset-fade-in motion-preset-slide-up motion-preset-expand motion-duration-500"
+>
+  Combined animation
+</div>
+
+<!-- Combine with different timings -->
+<div
+  class="
+  motion-preset-fade-in motion-duration-300
+  motion-preset-slide-up motion-duration-500
+"
+>
+  Different durations per property
+</div>
+```
+
+**The plugin composes CSS `@keyframes` together** — each preset adds its animation to the element's `animation` shorthand property.
 
 ---
 
-4. **What is `AnimatePresence` and when do you use it?**
+### 2. Responsive Animations
 
-   `AnimatePresence` allows components to animate out when they're removed from the React tree. It's essential for exit animations. Any child `motion` component with an `exit` prop will triggered when it leaves.
+**Question:**
+Different animations at different breakpoints.
+
+**Answer:**
+
+```html
+<!-- No animation on mobile, fade on tablet, slide on desktop -->
+<div
+  class="
+  motion-preset-none
+  md:motion-preset-fade-in
+  lg:motion-preset-slide-up
+"
+>
+  Responsive animation
+</div>
+
+<!-- Shorter duration on mobile -->
+<div
+  class="
+  motion-preset-fade-in
+  motion-duration-200
+  md:motion-duration-500
+"
+>
+  Faster on mobile
+</div>
+```
+
+**Disable all animations on mobile** for better performance on low-end devices.
 
 ---
 
-5. **How do you create reusable animated components using Tailwind and Motion?**
+## 🟡 Intermediate
 
-   By creating a wrapper component that accepts `children` and `className`, and uses a `motion.div` (or other element) internally. You can pass motion-specific props or define standard animation variants inside the component to keep the UI consistent.
+### 1. Scroll-Driven Animations
+
+**Question:**
+Scroll-triggered animations without JavaScript.
+
+**Answer:**
+
+```html
+<!-- CSS scroll-driven animation (modern browsers) -->
+<div class="motion-preset-fade-in motion-timeline-scroll">
+  Animates as you scroll
+</div>
+```
+
+**Under the hood**, this uses the CSS `animation-timeline: scroll()` property (supported in Chrome 115+, Firefox 110+):
+
+```css
+.motion-timeline-scroll {
+  animation-timeline: scroll();
+  animation-range: entry 0% entry 100%;
+}
+```
+
+**Fallback for unsupported browsers:** Use Intersection Observer with a simple fade class toggle:
+
+```javascript
+const observer = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("motion-preset-fade-in");
+      }
+    });
+  },
+  { threshold: 0.1 },
+);
+```
+
+---
+
+### 2. Animation States with Variants
+
+**Question:**
+Animations for hover, focus, and group states.
+
+**Answer:**
+
+```html
+<!-- Hover animation -->
+<button class="hover:motion-preset-expand motion-duration-200">
+  Grows on hover
+</button>
+
+<!-- Group hover — child animates when parent is hovered -->
+<div class="group">
+  <img class="group-hover:motion-preset-slide-up motion-duration-300" />
+  <p class="group-hover:motion-preset-fade-in motion-delay-100">
+    Caption slides in when card is hovered
+  </p>
+</div>
+
+<!-- Focus animation for form inputs -->
+<input class="focus:motion-preset-expand motion-duration-150" />
+```
+
+---
+
+## 🔴 Advanced
+
+### 1. Complex Choreographed Sequences
+
+**Question:**
+Landing page hero with sequential animations.
+
+**Answer:**
+
+```html
+<section class="relative overflow-hidden">
+  <!-- 1. Background fades in first -->
+  <div
+    class="absolute inset-0 bg-linear-to-br from-blue-900 to-purple-900
+    motion-preset-fade-in motion-duration-1000"
+  ></div>
+
+  <!-- 2. Title slides up (delayed 300ms) -->
+  <h1
+    class="text-6xl font-bold
+    motion-preset-slide-up motion-preset-fade-in
+    motion-duration-700 motion-delay-300"
+  >
+    Build the Future
+  </h1>
+
+  <!-- 3. Subtitle fades in (delayed 600ms) -->
+  <p
+    class="text-xl text-gray-300
+    motion-preset-fade-in
+    motion-duration-500 motion-delay-600"
+  >
+    Modern tools for modern developers
+  </p>
+
+  <!-- 4. CTA button scales in (delayed 900ms) -->
+  <button
+    class="px-8 py-4 bg-blue-500 rounded-lg
+    motion-preset-expand motion-preset-fade-in
+    motion-duration-500 motion-delay-900
+    hover:motion-preset-expand motion-ease-spring"
+  >
+    Get Started
+  </button>
+</section>
+```
+
+**Key technique:** Incremental `motion-delay-*` values create the sequential effect. Each element waits for the previous to start before beginning its own animation.
+
+---
+
+### 2. Accessibility & Reduced Motion
+
+**Question:**
+Respecting `prefers-reduced-motion`.
+
+**Answer:**
+
+```html
+<!-- Using motion-reduce variant -->
+<div
+  class="
+  motion-preset-slide-up motion-duration-500
+  motion-reduce:motion-preset-none
+  motion-reduce:opacity-100
+"
+>
+  Respects user preferences
+</div>
+
+<!-- Global approach — disable all animations -->
+<div class="motion-reduce:*:motion-preset-none">
+  <!-- All children lose animations when reduced motion is preferred -->
+</div>
+```
+
+**CSS behind the variant:**
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  .motion-reduce\:motion-preset-none {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+```
+
+**Best practices:**
+
+- Always provide `motion-reduce` alternatives.
+- Use `motion-safe` for optional enhancements (animations that only appear if user hasn't requested reduced motion).
+- Never gate critical information behind animations.
+- Test with "Reduce motion" enabled in OS accessibility settings.

@@ -1,6 +1,14 @@
-# Javascript Functions
+# JavaScript Functions
 
-## Beginner
+# 📚 Navigation
+
+- [Beginner](#-beginner)
+- [Intermediate](#-intermediate)
+- [Advanced](#-advanced)
+
+---
+
+## 🟢 Beginner
 
 ### 1. Pure Functions
 
@@ -26,7 +34,14 @@ const double = createMultiplier(2);
 console.log(double(5)); // Should log 10
 ```
 
-## Intermediate
+### 3. Function Expressions vs Declarations
+
+**Question:**
+Your teammate writes all utility functions as `const fn = () => {}` while another uses `function fn() {}`. During a code review, a bug is found — a function is called before its definition. Which style caused the bug and why? When would you choose one over the other?
+
+---
+
+## 🟡 Intermediate
 
 ### 1. Arrow Functions & `this` Context
 
@@ -66,15 +81,30 @@ const infoLog = logger("INFO");
 infoLog("System started"); // Output: [INFO] System started
 ```
 
-## Advanced
+### 3. Function Composition
+
+**Question:**
+You have three data transformation functions that need to run in sequence: `trim`, `toLowerCase`, and `addPrefix`. Write a `compose` (right-to-left) or `pipe` (left-to-right) utility to chain them. What is the advantage of this pattern in production data pipelines?
+
+---
+
+## 🔴 Advanced
 
 ### 1. Memoization Implementation
 
 **Question:**
-Implement a generic `memoize` function that caches the results of expensive function calls.
-Use `JSON.stringify` for the key. Why is this usually bad for production?
+Implement a generic `memoize` function that caches the results of expensive function calls. Address these production concerns:
 
-### 2. Debounce Implementation
+- Why is `JSON.stringify` for cache keys bad in production?
+- How would you add a max cache size (LRU eviction)?
+- What happens with object arguments that are referentially different but structurally identical?
+
+### 2. Debounce with Leading/Trailing Options
 
 **Question:**
-Implement a `debounce` function. Explain how it works and where it is used.
+Implement a `debounce` function that supports both `leading` and `trailing` invocation options. Explain the difference and give a real-world scenario for each mode.
+
+### 3. Throttle with Cancel & Flush
+
+**Question:**
+Implement a production-grade `throttle` function that includes `.cancel()` and `.flush()` methods. When would you use throttle over debounce in a scroll-heavy application?

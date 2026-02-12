@@ -1,6 +1,14 @@
-# Javascript Asynchronous
+# JavaScript Asynchronous
 
-## Beginner
+# 📚 Navigation
+
+- [Beginner](#-beginner)
+- [Intermediate](#-intermediate)
+- [Advanced](#-advanced)
+
+---
+
+## 🟢 Beginner
 
 ### 1. The Event Loop (High Level)
 
@@ -8,7 +16,21 @@
 In simple terms, how does JavaScript handle asynchronous operations (like fetching data) if it is single-threaded?
 
 **Answer:**
-JavaScript delegates these operations (networking, timers) to the browser/environment (Web APIs). When the operation completes, a callback is placed in a **Queue**. The **Event Loop** constantly checks if the main Call Stack is empty; if so, it moves the callback from the Queue to the Stack for execution.
+JavaScript delegates async operations (networking, timers, file I/O) to the **browser/runtime (Web APIs / libuv)**. When the operation completes, a callback is placed in a **Queue**. The **Event Loop** constantly checks if the main Call Stack is empty; if so, it moves the callback from the Queue to the Stack for execution.
+
+**Visual model:**
+
+```
+Call Stack  →  Web APIs (fetch, setTimeout, etc.)
+    ↑               ↓
+Event Loop  ←  Callback Queue (macrotasks)
+    ↑
+Microtask Queue (Promises, queueMicrotask)
+```
+
+**Key insight:** JavaScript is single-threaded, but the _runtime environment_ is not. Network requests, timers, and I/O run on separate threads in the browser/Node.js.
+
+---
 
 ### 2. Promises vs Callbacks
 
@@ -17,33 +39,38 @@ Why do we prefer Promises (and async/await) over callbacks?
 
 **Answer:**
 
-1. **Avoids Callback Hell:** deeply nested callbacks are hard to read and debug.
+1. **Avoids Callback Hell:** Deeply nested callbacks (pyramid of doom) are hard to read and debug.
 2. **Standardized Error Handling:** `.catch()` or `try/catch` vs checking `err` in every callback.
 3. **Composability:** `Promise.all`, `Promise.race` make coordinating multiple tasks easier.
+4. **Return values:** Promises can be returned, stored, and chained — callbacks cannot.
 
-## Intermediate
+**Callback hell example:**
+
+```javascript
+// ❌ Callback hell
+getUser(id, (err, user) => {
+  getOrders(user.id, (err, orders) => {
+    getOrderDetails(orders[0].id, (err, details) => {
+      // 3 levels deep, error handling repeated
+    });
+  });
+});
+
+// ✅ Promise chain (flat)
+getUser(id)
+  .then((user) => getOrders(user.id))
+  .then((orders) => getOrderDetails(orders[0].id))
+  .catch((err) => console.error(err));
+```
+
+---
+
+## 🟡 Intermediate
 
 ### 1. Async/Await & Error Handling
 
 **Question:**
-Refactor the following code to use `async/await`. Ensure you properly handle errors.
-
-```javascript
-function getUserData(id) {
-  return fetch(`/api/user/${id}`)
-    .then((res) => {
-      if (!res.ok) throw new Error("Fetch failed");
-      return res.json();
-    })
-    .then((data) => {
-      console.log(data);
-      return data;
-    })
-    .catch((err) => {
-      console.error(err);
-    });
-}
-```
+Refactor the following code to use `async/await`. What are the trade-offs between `try/catch` and `.catch()` patterns?
 
 **Answer:**
 
@@ -51,111 +78,307 @@ function getUserData(id) {
 async function getUserData(id) {
   try {
     const res = await fetch(`/api/user/${id}`);
-    if (!res.ok) throw new Error("Fetch failed");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();
-    console.log(data);
     return data;
   } catch (err) {
-    console.error(err);
+    console.error("Failed to fetch user:", err.message);
+    throw err; // Re-throw so callers can handle it
   }
 }
 ```
 
-**Key Points:**
+**`try/catch` vs `.catch()` trade-offs:**
 
-- Use `try/catch` block for error handling.
-- `await` pauses execution until the promise settles.
-- Still need to check `res.ok` for fetch (as 404s don't throw).
+| Pattern                     | Pros                                  | Cons                                                  |
+| --------------------------- | ------------------------------------- | ----------------------------------------------------- |
+| `try/catch`                 | Familiar, catches sync + async errors | Can be verbose, catches _all_ errors (including bugs) |
+| `.catch()` on await         | Only catches that specific promise    | Less readable when chaining multiple awaits           |
+| Wrapper function (Go-style) | Clean, no nesting                     | Unconventional in JS                                  |
+
+**Go-style pattern (used in some codebases):**
+
+```javascript
+async function to(promise) {
+  try {
+    return [await promise, null];
+  } catch (err) {
+    return [null, err];
+  }
+}
+
+const [user, err] = await to(fetchUser(id));
+if (err) return handleError(err);
+```
+
+---
 
 ### 2. Promise Combinators
 
 **Question:**
-You need to fetch data from 3 different APIs. You want to proceed as soon as **any one** of them returns a successful result. Which Promise method should you use?
-What if you need **all** of them to succeed?
+Compare all four Promise combinators with real-world scenarios.
 
 **Answer:**
 
-- **Any one succeeds (First success):** use `Promise.any([p1, p2, p3])`. It ignores rejections unless _all_ fail.
-- **First one settles (Success or Fail):** use `Promise.race([p1, p2, p3])`.
-- **All must succeed:** use `Promise.all([p1, p2, p3])`. It fails fast if _any_ promise rejects.
+| Combinator             | Resolves When                         | Rejects When                      | Use Case                                     |
+| ---------------------- | ------------------------------------- | --------------------------------- | -------------------------------------------- |
+| `Promise.all()`        | **All** resolve                       | **Any** rejects (fail-fast)       | Loading all resources for a page             |
+| `Promise.allSettled()` | **All** settle (resolve or reject)    | Never (always resolves)           | Batch operations where partial failure is OK |
+| `Promise.race()`       | **First** settles (resolve or reject) | **First** rejects                 | Timeout pattern                              |
+| `Promise.any()`        | **First** resolves                    | **All** reject (`AggregateError`) | Fastest CDN/mirror selection                 |
 
-## Advanced
+**Timeout pattern with `Promise.race()`:**
+
+```javascript
+async function fetchWithTimeout(url, ms) {
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("Timeout")), ms),
+  );
+  return Promise.race([fetch(url), timeout]);
+}
+```
+
+---
+
+### 3. Sequential vs Parallel Execution
+
+**Question:**
+A developer writes this code to fetch 5 users. Why is it slow? Refactor it.
+
+**Answer:**
+
+```javascript
+// ❌ Sequential — each fetch waits for the previous one
+async function getUsers(ids) {
+  const users = [];
+  for (const id of ids) {
+    const user = await fetchUser(id); // Blocks on each
+    users.push(user);
+  }
+  return users;
+}
+// If each fetch takes 200ms → 5 × 200ms = 1000ms total
+
+// ✅ Parallel — all fetches start simultaneously
+async function getUsers(ids) {
+  return Promise.all(ids.map((id) => fetchUser(id)));
+}
+// 5 fetches in parallel → ~200ms total (limited by slowest)
+```
+
+**When you actually NEED sequential:**
+
+- When each request depends on the previous result.
+- When the API has rate limits.
+- When order of side effects matters.
+
+**Controlled concurrency (limit parallel requests):**
+
+```javascript
+async function mapWithConcurrency(items, fn, concurrency = 3) {
+  const results = [];
+  const executing = new Set();
+
+  for (const item of items) {
+    const p = fn(item).then((result) => {
+      executing.delete(p);
+      return result;
+    });
+    executing.add(p);
+    results.push(p);
+
+    if (executing.size >= concurrency) {
+      await Promise.race(executing);
+    }
+  }
+
+  return Promise.all(results);
+}
+```
+
+---
+
+## 🔴 Advanced
 
 ### 1. Event Loop Internals (Microtasks vs Macrotasks)
 
 **Question:**
-What is the order of execution for the following code? explain why.
+What is the order of execution? Explain the queue priorities.
 
 ```javascript
 console.log("Start");
 
 setTimeout(() => console.log("Timeout"), 0);
 
-Promise.resolve().then(() => console.log("Promise"));
+Promise.resolve()
+  .then(() => console.log("Promise 1"))
+  .then(() => console.log("Promise 2"));
+
+queueMicrotask(() => console.log("Microtask"));
 
 console.log("End");
 ```
 
 **Answer:**
-**Order:** `Start`, `End`, `Promise`, `Timeout`
+**Output:** `Start`, `End`, `Promise 1`, `Microtask`, `Promise 2`, `Timeout`
 
-**Why:**
+**Execution breakdown:**
 
-1. `Start` and `End` are synchronous (Call Stack).
-2. `Promise.then()` callbacks go to the **Microtask Queue**.
-3. `setTimeout` callbacks go to the **Macrotask Queue** (Task Queue).
-4. Examples of Microtasks: `Promise.then`, `queueMicrotask`, `MutationObserver`.
-5. The Event Loop processes **all** microtasks before moving to the next macrotask. Thus, "Promise" logs before "Timeout".
+1. `"Start"` — synchronous, runs immediately.
+2. `setTimeout` — callback placed in **macrotask queue**.
+3. `Promise.resolve().then(...)` — callback placed in **microtask queue**.
+4. `queueMicrotask(...)` — callback placed in **microtask queue**.
+5. `"End"` — synchronous, runs immediately.
+6. **Call stack is now empty** → Event loop drains microtask queue:
+   - `"Promise 1"` logs → `.then()` chain adds `"Promise 2"` to microtask queue
+   - `"Microtask"` logs
+   - `"Promise 2"` logs (added by the previous microtask)
+7. **Microtask queue is empty** → Event loop takes from macrotask queue:
+   - `"Timeout"` logs
 
-### 2. Implementing Promise.all()
+**Rule:** Microtasks are **always** drained before the next macrotask.
+
+---
+
+### 2. Implementing `Promise.all()` from Scratch
 
 **Question:**
-Implement `Promise.all` from scratch. It should take an array of promises and return a single promise that resolves with an array of results, or rejects immediately if any promise fails.
+Implement `Promise.all` with proper edge case handling.
 
 **Answer:**
 
 ```javascript
 function myPromiseAll(promises) {
   return new Promise((resolve, reject) => {
-    const results = [];
+    // Handle non-array iterables
+    const arr = Array.from(promises);
+
+    if (arr.length === 0) return resolve([]);
+
+    const results = new Array(arr.length);
     let completed = 0;
 
-    if (promises.length === 0) resolve(results);
-
-    promises.forEach((p, index) => {
-      // Ensure p is a promise
+    arr.forEach((p, index) => {
+      // Wrap non-promise values with Promise.resolve
       Promise.resolve(p)
         .then((val) => {
-          results[index] = val; // Store result at correct index
+          results[index] = val; // Preserve order
           completed++;
-          if (completed === promises.length) resolve(results);
+          if (completed === arr.length) resolve(results);
         })
-        .catch((err) => reject(err)); // Fail fast
+        .catch(reject); // Fail fast on first rejection
     });
   });
 }
 ```
 
-### 3. Async Generators
+**Edge cases handled:**
+
+- ✅ Empty array → resolves with `[]`
+- ✅ Non-promise values → wrapped with `Promise.resolve()`
+- ✅ Order preserved → results stored at correct index
+- ✅ Fail-fast → first rejection rejects the outer promise
+
+**⚠️ Common bugs in naive implementations:**
+
+- Using `push()` instead of index assignment → wrong order.
+- Not handling the empty array case → promise never resolves.
+- Not wrapping values with `Promise.resolve()` → crashes on non-promise inputs.
+
+---
+
+### 3. Async Generators & Streaming
 
 **Question:**
-How would you iterate over an async data stream (like paginated API responses) using `for await...of`?
+Implement paginated API fetching with async generators.
 
 **Answer:**
-You utilize Async Iterators/Generators.
 
 ```javascript
-async function* fetchPages(url) {
-  let nextPage = url;
-  while (nextPage) {
-    const response = await fetch(nextPage);
-    const data = await response.json();
-    nextPage = data.next;
-    yield data.results;
+async function* fetchAllPages(baseUrl) {
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const res = await fetch(`${baseUrl}?page=${page}`);
+    const data = await res.json();
+
+    yield data.items; // Yield one page at a time
+
+    hasMore = data.hasNextPage;
+    page++;
   }
 }
 
-// Usage
-// for await (const pageItems of fetchPages('/api/items')) { ... }
+// Consumer — processes pages lazily
+for await (const pageItems of fetchAllPages("/api/products")) {
+  renderProducts(pageItems);
+  // Can break early without fetching remaining pages
+}
 ```
+
+**Comparison with upfront fetching:**
+
+| Approach              | Memory         | Time to First Render | Network                  |
+| --------------------- | -------------- | -------------------- | ------------------------ |
+| Fetch all pages first | O(total items) | Slow (waits for all) | All pages fetched        |
+| Async generator       | O(page size)   | Fast (first page)    | Only fetches as consumed |
+
+**Production use cases:**
+
+- Paginated database queries
+- Streaming large CSV/JSON files
+- Real-time log tailing
+- Social media feed loading
+
+---
+
+### 4. AbortController for Request Cancellation
+
+**Question:**
+Cancel in-flight requests when a user navigates away.
+
+**Answer:**
+
+```javascript
+class RequestManager {
+  constructor() {
+    this.controller = new AbortController();
+  }
+
+  async fetch(url) {
+    const res = await fetch(url, { signal: this.controller.signal });
+    return res.json();
+  }
+
+  cancelAll() {
+    this.controller.abort();
+    // Create a new controller for future requests
+    this.controller = new AbortController();
+  }
+}
+
+// Usage in React
+useEffect(() => {
+  const controller = new AbortController();
+
+  fetch("/api/data", { signal: controller.signal })
+    .then((res) => res.json())
+    .then(setData)
+    .catch((err) => {
+      if (err.name !== "AbortError") throw err;
+      // Silently ignore aborted requests
+    });
+
+  return () => controller.abort(); // Cleanup on unmount
+}, []);
+```
+
+**What happens when you abort:**
+
+- The `fetch` promise rejects with an `AbortError`.
+- The browser **actually cancels** the HTTP request (visible in DevTools as "canceled").
+- The TCP connection may be reused for other requests.
+
+**⚠️ Common mistake:** Not checking `err.name === "AbortError"` in catch blocks — this leads to spurious error logging/toasts when users navigate normally.

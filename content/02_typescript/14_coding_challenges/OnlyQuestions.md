@@ -1,12 +1,43 @@
-# Coding Challenges - Questions
+# TypeScript Coding Challenges
 
-1. Create a generic function that returns the first element of an array.
-2. Write a type that makes all properties of an object optional recursively (DeepPartial).
-3. Create a type that extracts all keys of an object that have string values.
-4. Write a type-safe function that merges two objects.
-5. Implement a type that converts a union to an intersection.
-6. Create a type that removes `readonly` from all properties.
-7. Write a generic type that gets the return type of an async function.
-8. Create a type-safe event emitter.
-9. Implement a `Flatten` type for nested arrays.
-10. Write a type that validates an object has at least one property.
+# 📚 Navigation
+
+- [Beginner](#-beginner)
+- [Intermediate](#-intermediate)
+- [Advanced](#-advanced)
+
+---
+
+## 🟢 Beginner
+
+### 1. Type-Safe `groupBy`
+
+**Challenge:** Implement a type-safe `groupBy<T, K extends keyof T>(items: T[], key: K)` function that groups array elements by a key.
+
+### 2. Type-Safe `pick` and `omit`
+
+**Challenge:** Implement runtime `pick` and `omit` functions with full type safety using generics and `keyof`.
+
+---
+
+## 🟡 Intermediate
+
+### 1. Type-Safe Event Emitter
+
+**Challenge:** Build a fully type-safe event emitter where event names and handler payload types are enforced at compile time. Invalid event names or wrong payloads should cause type errors.
+
+### 2. Builder Pattern with Types
+
+**Challenge:** Create a type-safe query builder where methods chain and the `build()` method can only be called when required fields (like `table`) are set. Invalid build calls should cause compile-time errors.
+
+---
+
+## 🔴 Advanced
+
+### 1. Type-Safe Path Accessor
+
+**Challenge:** Create a `get(obj, "db.credentials.user")` function that accesses nested properties using a dot-separated path string, with the return type automatically inferred from the path.
+
+### 2. Type-Safe State Machine
+
+**Challenge:** Implement a state machine where valid transitions are defined as a type and invalid state transitions cause compile-time errors (e.g., you can go from `idle` → `loading` but NOT `idle` → `success`).

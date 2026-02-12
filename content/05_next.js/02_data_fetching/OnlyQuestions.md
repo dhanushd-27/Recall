@@ -1,7 +1,39 @@
-# Data Fetching - Questions
+# Next.js Data Fetching
 
-1. How do you fetch data in Server Components?
-2. Explain the difference between `fetch` with `{ cache: 'force-cache' }` and `{ cache: 'no-store' }`.
-3. What is "Revalidation" (ISR) and how do you implement it in the App Router?
-4. How do you fetch data on the Client in Next.js?
-5. What are Server Actions and when should you use them?
+# 📚 Navigation
+
+- [Beginner](#-beginner)
+- [Intermediate](#-intermediate)
+- [Advanced](#-advanced)
+
+---
+
+## 🟢 Beginner
+
+### 1. Server Components & Data Fetching
+
+**Question:** How do you fetch data in Next.js Server Components? Why can you use `async/await` directly in the component body?
+
+### 2. Caching Behavior
+
+## **Question:** Explain Next.js's caching layers: Request Memoization, Data Cache, and Full Route Cache. How does `revalidate` work?
+
+## 🟡 Intermediate
+
+### 1. Streaming & Suspense
+
+**Question:** How does streaming work in Next.js? Show how `loading.tsx` and nested `<Suspense>` boundaries enable progressive page loading.
+
+### 2. `fetch` API Extensions
+
+## **Question:** How does Next.js extend the native `fetch` API? Explain `cache: "force-cache"`, `cache: "no-store"`, and `next: { revalidate: N }`.
+
+## 🔴 Advanced
+
+### 1. On-Demand Revalidation
+
+**Question:** How do `revalidatePath` and `revalidateTag` work? Design a CMS webhook that invalidates specific pages when content changes.
+
+### 2. Parallel Data Fetching
+
+**Question:** A page needs data from three independent APIs. Show the difference between sequential and parallel fetching and how to avoid request waterfalls.

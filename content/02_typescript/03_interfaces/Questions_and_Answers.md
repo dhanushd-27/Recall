@@ -1,88 +1,293 @@
-# Interfaces - Questions and Answers
+# TypeScript Interfaces
 
-1. **How do you define an interface?**
+# 📚 Navigation
 
-   You use the `interface` keyword followed by the name and the shape of the object.
-
-   ```typescript
-   interface User {
-     name: string;
-     age: number;
-   }
-   ```
+- [Beginner](#-beginner)
+- [Intermediate](#-intermediate)
+- [Advanced](#-advanced)
 
 ---
 
-2. **Explain optional properties in interfaces.**
+## 🟢 Beginner
 
-   You can make a property optional by adding a `?` after the property name. This means the object may or may not include that property.
+### 1. Defining Interfaces
 
-   ```typescript
-   interface User {
-     name: string;
-     email?: string; // Optional
-   }
-   ```
+**Question:**
+How do you define an interface with required and optional properties?
 
----
+**Answer:**
 
-3. **What are readonly properties?**
+```typescript
+interface User {
+  id: string; // Required
+  name: string; // Required
+  email: string; // Required
+  phone?: string; // Optional — may be undefined
+  avatar?: string; // Optional
+}
 
-   The `readonly` modifier prevents a property from being reassigned after it's initialized.
+// ✅ Valid — optional properties omitted
+const user: User = { id: "1", name: "Alice", email: "a@b.com" };
 
-   ```typescript
-   interface Point {
-     readonly x: number;
-     readonly y: number;
-   }
-   ```
+// ❌ Error — missing required property
+const bad: User = { id: "1", name: "Alice" }; // Missing 'email'
+```
 
----
+**Optional vs `undefined`:**
 
-4. **How do interfaces support function types?**
+```typescript
+interface A {
+  x?: number;
+} // x can be missing or undefined
+interface B {
+  x: number | undefined;
+} // x MUST be present, but can be undefined
 
-   Interfaces can describe function types by defining a call signature.
-
-   ```typescript
-   interface SearchFunc {
-     (source: string, subString: string): boolean;
-   }
-   ```
-
----
-
-5. **Explain interface inheritance/extension.**
-
-   Interfaces can extend one or more other interfaces using the `extends` keyword, allowing you to compose complex shapes from simpler ones.
-
-   ```typescript
-   interface Shape {
-     color: string;
-   }
-   interface Square extends Shape {
-     sideLength: number;
-   }
-   ```
+const a: A = {}; // ✅ — x can be absent
+const b: B = {}; // ❌ — x must be explicitly set
+const b2: B = { x: undefined }; // ✅
+```
 
 ---
 
-6. **What is declaration merging?**
+### 2. Readonly Properties
 
-   TypeScript automatically merges multiple interface declarations with the same name in the same scope into a single interface. This is unique to interfaces and doesn't work for type aliases.
+**Question:**
+Enforce immutability with `readonly`.
+
+**Answer:**
+
+```typescript
+interface Config {
+  readonly apiUrl: string;
+  readonly timeout: number;
+  readonly features: readonly string[];
+}
+
+const config: Config = {
+  apiUrl: "https://api.example.com",
+  timeout: 5000,
+  features: ["auth", "logging"],
+};
+
+config.apiUrl = "hacked"; // ❌ Error: Cannot assign to 'apiUrl'
+config.features.push("new"); // ❌ Error: 'push' does not exist on 'readonly string[]'
+```
+
+**⚠️ `readonly` is shallow:** Nested objects need their own `readonly` modifiers or use `Readonly<T>` recursively.
+
+**Deep readonly utility:**
+
+```typescript
+type DeepReadonly<T> = {
+  readonly [K in keyof T]: T[K] extends object ? DeepReadonly<T[K]> : T[K];
+};
+```
 
 ---
 
-7. **How do you define an interface for a class?**
+## 🟡 Intermediate
 
-   Use an interface to describe the public shape of a class. The class then uses the `implements` keyword to ensure it adheres to that shape.
+### 1. Interface Extension & Composition
 
-   ```typescript
-   interface Pingable {
-     ping(): void;
-   }
-   class Sonar implements Pingable {
-     ping() {
-       console.log("ping!");
-     }
-   }
-   ```
+**Question:**
+Compose multiple interfaces into a `User` type.
+
+**Answer:**
+
+```typescript
+interface BaseEntity {
+  id: string;
+}
+
+interface Timestamped {
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface SoftDeletable {
+  deletedAt: Date | null;
+  isDeleted: boolean;
+}
+
+// Extension — single inheritance chain
+interface User extends BaseEntity, Timestamped, SoftDeletable {
+  name: string;
+  email: string;
+}
+
+// Intersection — equivalent but no declaration merging
+type User = BaseEntity &
+  Timestamped &
+  SoftDeletable & {
+    name: string;
+    email: string;
+  };
+```
+
+| Feature             | `extends`                      | `&` Intersection          |
+| ------------------- | ------------------------------ | ------------------------- |
+| Conflict handling   | ❌ Error on incompatible types | Silently produces `never` |
+| Declaration merging | ✅                             | ❌                        |
+| Readability         | Explicit hierarchy             | Flatter, more flexible    |
+| Error messages      | Clearer                        | Can be confusing          |
+
+**Recommendation:** Use `extends` for object shapes with clear hierarchy. Use `&` for ad-hoc composition.
+
+---
+
+### 2. Function Types in Interfaces
+
+**Question:**
+Define a type-safe API client interface.
+
+**Answer:**
+
+```typescript
+interface RequestConfig {
+  url: string;
+  method: "GET" | "POST" | "PUT" | "DELETE";
+  body?: unknown;
+  headers?: Record<string, string>;
+}
+
+interface ApiClient {
+  get<T>(url: string): Promise<T>;
+  post<T>(url: string, body: unknown): Promise<T>;
+  put<T>(url: string, body: unknown): Promise<T>;
+  delete(url: string): Promise<void>;
+
+  // Generic catch-all
+  request<T>(config: RequestConfig): Promise<T>;
+}
+
+// Implementation
+class HttpClient implements ApiClient {
+  async get<T>(url: string): Promise<T> {
+    const res = await fetch(url);
+    return res.json();
+  }
+  // ... other methods
+}
+```
+
+**Call signatures (callable interface):**
+
+```typescript
+interface Formatter {
+  (value: string): string; // Call signature
+  locale: string; // Property
+}
+```
+
+---
+
+### 3. Declaration Merging
+
+**Question:**
+Why can you write the same interface name twice?
+
+**Answer:**
+TypeScript **merges** interfaces with the same name in the same scope — their members are combined.
+
+```typescript
+interface Window {
+  myApp: {
+    version: string;
+    debug: boolean;
+  };
+}
+
+// Now TypeScript knows about window.myApp
+window.myApp.version; // ✅ No error
+```
+
+**Essential use cases:**
+
+- **Augmenting global types:** Adding properties to `Window`, `Document`.
+- **Extending library types:** Adding fields to Express `Request`, Prisma models.
+- **Module augmentation:** Adding custom types to third-party packages.
+
+**⚠️ `type` aliases CANNOT merge — this is the key architectural difference.** Libraries expose `interface` specifically to allow consumers to extend their types.
+
+---
+
+## 🔴 Advanced
+
+### 1. Interfaces vs Abstract Classes
+
+**Question:**
+When to use each for contracts.
+
+**Answer:**
+
+| Feature                | Interface                  | Abstract Class            |
+| ---------------------- | -------------------------- | ------------------------- |
+| Runtime existence      | ❌ Erased at compile time  | ✅ Exists at runtime      |
+| `instanceof` check     | ❌                         | ✅                        |
+| Method implementations | ❌ (only signatures)       | ✅ (can provide defaults) |
+| Multiple inheritance   | ✅ (`implements` multiple) | ❌ (single `extends`)     |
+| Constructor            | ❌                         | ✅                        |
+| Bundle size impact     | Zero                       | Adds code                 |
+
+**Use `interface` when:** You only need a type contract (most cases).
+**Use `abstract class` when:** You need shared method implementations, constructor logic, or runtime `instanceof` checks.
+
+```typescript
+// Interface — pure contract
+interface Logger {
+  log(message: string): void;
+  error(message: string): void;
+}
+
+// Abstract class — shared implementation
+abstract class BaseLogger {
+  abstract log(message: string): void;
+
+  error(message: string): void {
+    this.log(`[ERROR] ${message}`); // Default implementation
+  }
+}
+```
+
+---
+
+### 2. Hybrid Types
+
+**Question:**
+Define a callable value with properties.
+
+**Answer:**
+
+```typescript
+interface Counter {
+  (start: number): string; // Callable
+  count: number; // Property
+  reset(): void; // Method
+}
+
+function createCounter(): Counter {
+  const fn = ((start: number) => {
+    fn.count += start;
+    return `Count: ${fn.count}`;
+  }) as Counter;
+
+  fn.count = 0;
+  fn.reset = () => {
+    fn.count = 0;
+  };
+
+  return fn;
+}
+
+const counter = createCounter();
+counter(5); // "Count: 5" — called as function
+counter.count; // 5 — accessed as property
+counter.reset(); // Called as method
+```
+
+**Real-world examples:**
+
+- jQuery's `$` — function + object with methods
+- Express's `app` — callable + has `.get()`, `.post()` methods
+- Chai's `expect()` — returns callable assertion chains

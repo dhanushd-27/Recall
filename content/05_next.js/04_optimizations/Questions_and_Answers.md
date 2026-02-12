@@ -1,36 +1,160 @@
-# Optimizations - Questions and Answers
+# Next.js Optimizations
 
-1. **How does the `next/image` component optimize images?**
-   - **Resizing**: Automatically serves correctly sized images for each device.
-   - **Format**: Converts images to modern formats like WebP or AVIF if supported.
-   - **Lazy Loading**: Images are only loaded when they enter the viewport.
-   - **Stability**: Prevents layout shift by requiring width and height (or `fill`).
+# 📚 Navigation
 
----
-
-2. **What are the benefits of using `next/font`?**
-
-   It automatically optimizes fonts (including Google Fonts) and removes external network requests for better privacy and performance. It self-hosts the font files at build time and uses the `size-adjust` property to prevent layout shifts.
+- [Beginner](#-beginner)
+- [Intermediate](#-intermediate)
+- [Advanced](#-advanced)
 
 ---
 
-3. **How do you manage scripts using `next/script`?**
+## 🟢 Beginner
 
-   The `next/script` component allows you to set the loading priority of third-party scripts.
-   - `beforeInteractive`: Load before any Next.js code.
-   - `afterInteractive` (Default): Load after some hydration.
-   - `lazyOnload`: Load during idle time.
-   - `worker`: (Experimental) Load in a web worker.
+### 1. Image Optimization
+
+**Question:** How `next/image` works.
+
+**Answer:**
+
+```tsx
+import Image from "next/image";
+
+<Image
+  src="/hero.jpg"
+  alt="Hero banner"
+  width={1200}
+  height={600}
+  priority // Preload above-the-fold images
+  placeholder="blur" // Show blurred placeholder while loading
+/>;
+```
+
+| Feature                 | `<img>` | `next/image`                |
+| ----------------------- | ------- | --------------------------- |
+| Automatic resizing      | ❌      | ✅ Multiple sizes generated |
+| Format conversion       | ❌      | ✅ WebP/AVIF automatically  |
+| Lazy loading            | Manual  | ✅ Default                  |
+| Layout shift prevention | Manual  | ✅ Width/height enforced    |
+| CDN caching             | Manual  | ✅ Built-in                 |
 
 ---
 
-4. **What is dynamic import and how does it help performance?**
+### 2. Font Optimization
 
-   Dynamic import (`next/dynamic`) is a way to load components only when they are needed. This reduces the initial bundle size and improves the Initial Page Load time. It's often used for large components like maps or charts that are not visible on the initial screen.
+**Question:** How `next/font` works.
+
+**Answer:**
+
+```tsx
+import { Inter } from "next/font/google";
+const inter = Inter({ subsets: ["latin"], display: "swap" });
+
+export default function Layout({ children }) {
+  return <body className={inter.className}>{children}</body>;
+}
+```
+
+**Self-hosting benefits:**
+
+- No external network requests (faster).
+- No privacy concerns (no Google tracking).
+- No layout shift from font loading (fonts are preloaded).
+- Fonts are inlined in CSS at build time.
 
 ---
 
-5. **How does Next.js handle middleware and what are its common use cases?**
+## 🟡 Intermediate
 
-   Middleware allows you to run code before a request is completed. It runs on the Edge.
-   - **Use Cases**: Authentication checks, redirects, rewrites, bot detection, and A/B testing.
+### 1. Metadata API
+
+**Question:** SEO in App Router.
+
+**Answer:**
+
+```tsx
+// Static metadata
+export const metadata = {
+  title: "My Blog",
+  description: "Thoughts on engineering",
+  openGraph: { title: "My Blog", images: ["/og.png"] },
+};
+
+// Dynamic metadata
+export async function generateMetadata({ params }) {
+  const post = await getPost(params.slug);
+  return {
+    title: post.title,
+    description: post.excerpt,
+    openGraph: { title: post.title, images: [post.coverImage] },
+  };
+}
+```
+
+---
+
+### 2. Bundle Analysis
+
+**Question:** Analyze and reduce bundle.
+
+**Answer:**
+
+```bash
+# Install analyzer
+npm i @next/bundle-analyzer
+
+# next.config.js
+const withBundleAnalyzer = require("@next/bundle-analyzer")({
+  enabled: process.env.ANALYZE === "true",
+});
+module.exports = withBundleAnalyzer(nextConfig);
+
+# Run
+ANALYZE=true npm run build
+```
+
+**Reduction strategies:**
+
+- Use dynamic `import()` for heavy libraries.
+- Replace large libraries with lighter alternatives (e.g., `date-fns` → `dayjs`).
+- Move code to Server Components (zero client JS).
+- Use `next/dynamic` with `ssr: false` for client-only components.
+
+---
+
+## 🔴 Advanced
+
+### 1. Caching Strategy
+
+**Question:** E-commerce caching architecture.
+
+**Answer:**
+
+| Data              | Cache Strategy            | Revalidation              |
+| ----------------- | ------------------------- | ------------------------- |
+| Product catalog   | ISR (revalidate: 3600)    | On-demand via CMS webhook |
+| Inventory levels  | No cache (`no-store`)     | Every request             |
+| User cart         | Client state (Zustand)    | N/A                       |
+| Navigation/footer | SSG                       | On deploy                 |
+| Search results    | SWR on client             | Background refetch        |
+| Recommendations   | Edge cached, personalized | 5 minute TTL              |
+
+---
+
+### 2. Core Web Vitals
+
+**Question:** Monitoring and Next.js impact.
+
+**Answer:**
+
+| Metric | What it measures           | Next.js features that help                           |
+| ------ | -------------------------- | ---------------------------------------------------- |
+| LCP    | Largest content paint      | `next/image` priority, streaming SSR, PPR            |
+| INP    | Interaction responsiveness | Server Components (less JS), `startTransition`       |
+| CLS    | Layout shift               | `next/image` (reserved space), `next/font` (no FOIT) |
+
+```tsx
+// Report Web Vitals
+export function reportWebVitals(metric) {
+  analytics.send({ name: metric.name, value: metric.value, id: metric.id });
+}
+```

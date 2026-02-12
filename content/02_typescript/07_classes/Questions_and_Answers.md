@@ -1,70 +1,287 @@
-# Classes - Questions and Answers
+# TypeScript Classes
 
-1. **How do you define a class in TypeScript?**
+# 📚 Navigation
 
-   Similar to ES6 classes, but with additional type features for properties and methods.
-
-   ```typescript
-   class User {
-     name: string;
-     constructor(name: string) {
-       this.name = name;
-     }
-     greet() {
-       console.log(`Hello ${this.name}`);
-     }
-   }
-   ```
+- [Beginner](#-beginner)
+- [Intermediate](#-intermediate)
+- [Advanced](#-advanced)
 
 ---
 
-2. **Explain access modifiers: `public`, `private`, `protected`.**
-   - **`public`**: Default. Accessible from anywhere.
-   - **`private`**: Only accessible within the class itself.
-   - **`protected`**: Accessible within the class and its subclasses.
+## 🟢 Beginner
+
+### 1. Class Basics & Access Modifiers
+
+**Question:**
+Difference between `public`, `private`, `protected`, and `#private`.
+
+**Answer:**
+
+| Modifier            | Access             | Runtime enforcement      | Subclass access |
+| ------------------- | ------------------ | ------------------------ | --------------- |
+| `public` (default)  | Everywhere         | No                       | ✅              |
+| `private`           | Class only         | ❌ (TS-only, bypassable) | ❌              |
+| `protected`         | Class + subclasses | ❌ (TS-only)             | ✅              |
+| `#private` (ES2022) | Class only         | ✅ (truly private)       | ❌              |
+
+```typescript
+class User {
+  public name: string; // Accessible everywhere
+  private password: string; // TS-only private (compiled away)
+  protected role: string; // Accessible in subclasses
+  #ssn: string; // True runtime private
+
+  constructor(name: string, password: string, ssn: string) {
+    this.name = name;
+    this.password = password;
+    this.role = "user";
+    this.#ssn = ssn;
+  }
+}
+
+const user = new User("Alice", "pass", "123");
+user.name; // ✅
+user.password; // ❌ TS Error (but accessible at runtime via user["password"])
+user.#ssn; // ❌ Syntax Error — truly private at runtime
+```
+
+**Recommendation:** Use `#private` for sensitive data. Use `private` keyword for general encapsulation.
 
 ---
 
-3. **What is the difference between `private` and `#` private fields?**
-   - **`private`**: A TypeScript compile-time feature. It prevents access during development but doesn't offer true runtime privacy once transpiled to JS (unless using specific decorators or TS 3.8+ features).
-   - **`#` (Hard Private)**: A JavaScript runtime feature (private class fields). It provides true privacy at runtime and cannot be accessed outside the class even in JS.
+### 2. Constructor Shorthand
+
+**Question:**
+TypeScript's parameter property shorthand.
+
+**Answer:**
+
+```typescript
+// ❌ Verbose
+class User {
+  id: string;
+  name: string;
+  email: string;
+
+  constructor(id: string, name: string, email: string) {
+    this.id = id;
+    this.name = name;
+    this.email = email;
+  }
+}
+
+// ✅ Shorthand — access modifiers in constructor parameters
+class User {
+  constructor(
+    public readonly id: string,
+    public name: string,
+    public email: string,
+    private password?: string,
+  ) {}
+}
+// TypeScript automatically creates and assigns properties
+```
 
 ---
 
-4. **Explain abstract classes and methods.**
+## 🟡 Intermediate
 
-   An `abstract` class cannot be instantiated directly. It serves as a base for other classes. `abstract` methods within an abstract class do not have an implementation and must be implemented in derived classes.
+### 1. Abstract Classes vs Interfaces
+
+**Question:**
+Logging system — abstract class vs interface.
+
+**Answer:**
+
+```typescript
+// Abstract class — shared implementation
+abstract class BaseLogger {
+  protected level: string = "info";
+
+  abstract log(message: string): void; // Must implement
+
+  error(message: string): void {
+    // Default implementation
+    this.log(`[ERROR] ${message}`);
+  }
+
+  setLevel(level: string): void {
+    this.level = level;
+  }
+}
+
+class ConsoleLogger extends BaseLogger {
+  log(message: string): void {
+    console.log(`[${this.level}] ${message}`);
+  }
+}
+
+// Interface — pure contract
+interface Logger {
+  log(message: string): void;
+  error(message: string): void;
+}
+```
+
+**Choose abstract class when:** You have shared behavior or state (like `setLevel`).
+**Choose interface when:** You only need a contract with no shared logic.
 
 ---
 
-5. **What are static members?**
+### 2. `implements` vs `extends`
 
-   Static properties and methods belong to the class itself, not to instances of the class. They are accessed using the class name.
+**Question:**
+Difference and multiple inheritance.
+
+**Answer:**
+
+```typescript
+// extends — inherit implementation (single only)
+class Dog extends Animal {
+  bark() { console.log("Woof!"); }
+}
+
+// implements — satisfy a contract (multiple allowed)
+class Dog implements IAnimal, ISerializable {
+  name: string;
+  speak() { ... }  // Must implement
+  serialize() { ... }  // Must implement
+}
+```
+
+| Feature        | `extends`            | `implements`                   |
+| -------------- | -------------------- | ------------------------------ |
+| Inherits code  | ✅                   | ❌ (must implement everything) |
+| Multiple       | ❌ (single class)    | ✅ (multiple interfaces)       |
+| Runtime effect | ✅ (prototype chain) | ❌ (type-only)                 |
 
 ---
 
-6. **Explain parameter properties.**
+### 3. Generic Classes
 
-   A shorthand syntax for declaring and initializing member variables in the constructor.
+**Question:**
+Type-safe `Stack<T>`.
 
-   ```typescript
-   class User {
-     constructor(
-       public name: string,
-       private age: number,
-     ) {}
-   }
-   ```
+**Answer:**
 
-   This is equivalent to declaring the properties and assigning them in the constructor body.
+```typescript
+class Stack<T> {
+  #items: T[] = [];
+
+  push(item: T): void {
+    this.#items.push(item);
+  }
+
+  pop(): T | undefined {
+    return this.#items.pop();
+  }
+
+  peek(): T | undefined {
+    return this.#items[this.#items.length - 1];
+  }
+
+  isEmpty(): boolean {
+    return this.#items.length === 0;
+  }
+
+  get size(): number {
+    return this.#items.length;
+  }
+}
+
+const numStack = new Stack<number>();
+numStack.push(1); // ✅
+numStack.push("a"); // ❌ Error: string is not number
+numStack.pop(); // type: number | undefined
+```
 
 ---
 
-7. **How do classes implement interfaces?**
+## 🔴 Advanced
 
-   A class can use the `implements` keyword to ensure it adheres to a specific interface's contract.
+### 1. Mixins Pattern
 
-   ```typescript
-   interface Greetable { greet(): void; }
-   class User implements Greetable { greet() { ... } }
-   ```
+**Question:**
+Compose behavior from multiple sources.
+
+**Answer:**
+
+```typescript
+type Constructor<T = {}> = new (...args: any[]) => T;
+
+// Mixin factory functions
+function Timestamped<T extends Constructor>(Base: T) {
+  return class extends Base {
+    createdAt = new Date();
+    updatedAt = new Date();
+  };
+}
+
+function SoftDeletable<T extends Constructor>(Base: T) {
+  return class extends Base {
+    deletedAt: Date | null = null;
+    softDelete() {
+      this.deletedAt = new Date();
+    }
+    restore() {
+      this.deletedAt = null;
+    }
+  };
+}
+
+// Compose mixins
+class BaseEntity {
+  id = crypto.randomUUID();
+}
+
+class User extends SoftDeletable(Timestamped(BaseEntity)) {
+  constructor(public name: string) {
+    super();
+  }
+}
+
+const user = new User("Alice");
+user.id; // From BaseEntity
+user.createdAt; // From Timestamped
+user.softDelete(); // From SoftDeletable
+```
+
+---
+
+### 2. Singleton Pattern
+
+**Question:**
+Implement type-safe Singleton.
+
+**Answer:**
+
+```typescript
+class Database {
+  private static instance: Database;
+
+  private constructor(private readonly connectionString: string) {}
+
+  static getInstance(connStr?: string): Database {
+    if (!Database.instance) {
+      if (!connStr)
+        throw new Error("Connection string required for first init");
+      Database.instance = new Database(connStr);
+    }
+    return Database.instance;
+  }
+
+  query(sql: string): void {
+    console.log(`Executing: ${sql}`);
+  }
+}
+
+const db = Database.getInstance("postgres://...");
+const db2 = Database.getInstance(); // Same instance
+// new Database(); // ❌ Error — constructor is private
+```
+
+**Modern alternatives to Singleton:**
+
+- **Module-level constants** — ES modules are singletons by default: `export const db = createConnection()`.
+- **Dependency injection** — frameworks like NestJS, InversifyJS manage instance lifecycle.
+- **Singleton makes testing hard** — you can't swap implementations. DI is preferred in production.

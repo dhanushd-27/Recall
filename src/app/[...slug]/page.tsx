@@ -1,6 +1,7 @@
 import { getContent } from "@/lib/content";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import rehypeSlug from "rehype-slug";
 
 export default async function Page({
   params,
@@ -25,7 +26,7 @@ export default async function Page({
   return (
     <article className="prose dark:prose-invert max-w-3xl mx-auto py-10 px-6">
       <h1 className="mb-8">{title}</h1>
-      <ReactMarkdown>{data.content}</ReactMarkdown>
+      <ReactMarkdown rehypePlugins={[rehypeSlug]}>{data.content}</ReactMarkdown>
     </article>
   );
 }
